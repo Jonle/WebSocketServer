@@ -1,0 +1,20 @@
+#!/usr/bin/env node
+const PORT = 8081;
+
+const ws = require('ws');
+const http = require('http');
+const app = require('../app');
+const server = http.createServer(app);
+
+
+const wss = new ws.Server({server});
+wss.on('connection',function (socket) {
+    socket.on('message',function (event) {
+        console.log(event);
+    });
+});
+
+server.listen(PORT);
+
+
+
