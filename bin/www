@@ -8,9 +8,24 @@ const server = http.createServer(app);
 
 
 const wss = new ws.Server({server});
+let mySql = {};
 wss.on('connection',function (socket) {
-    socket.on('message',function (event) {
-        console.log(event);
+    socket.on('message',function (data) {
+        var obj = JSON.parse(data);
+        if(obj.event === 'signup') {
+            if(!mySql[obj.user]) {
+                mySql[obj.user] = obj.password;
+                socket.send(200);
+            } else {
+                socket.send(409);
+            }
+        } else if(obj.event === 'signin'){
+            if(!mySql[obj.user]) {
+                socket.send(404);
+            } else {
+                socket.send(200);
+            }
+        }
     });
 });
 
