@@ -1,31 +1,50 @@
 #!/usr/bin/env node
 const PORT = 8081;
+const CONST = require('../src/const');
+const INFO = require('../src/info');
 
 const ws = require('ws');
 const http = require('http');
-const app = require('../app');
+const app = require('../src/app');
 const server = http.createServer(app);
-
-
 const wss = new ws.Server({server});
-let mySql = {};
-wss.on('connection',function (socket) {
-    socket.on('message',function (data) {
+const SQL = require('..src/sql');
+let mysql = new SQL({
+    password: 'jonle234517',
+    database: 'websocket'
+});
+wss.on('connection', (socket) => {
+    socket.on('message', (data) => {
         var obj = JSON.parse(data);
-        if(obj.event === 'signup') {
-            if(!mySql[obj.user]) {
-                mySql[obj.user] = obj.password;
-                socket.send(200);
+        mysql.connect();
+        let selectSql = `SELECT * FROM user WHERE name ${obj.user}`;
+        let insertSql = `INSERT INTO user(name,password) VALUES(${obj.user},${obj.password})`;
+        mysql.retrieve(selectSql, (error, result) => {
+            if (error) {
+                if (obj.event === 'signup') {
+                    mysql.create(insertSql, (error, result) => {
+                        if (!error) {
+                            socket.send({code:CONST.SUCCESS,message:INFO.ERROR_NONE});
+                        } else {
+                            socket.send({code:CONST.FAILED,message:INFO.ERROR_SIGN_UP});
+                        }
+                    });
+                } else if (obj.event === 'signin') {
+                    socket.send({code:CONST.FAILED,message:INFO.ERROR_USER_NAME});// 用户名错误
+                }
             } else {
-                socket.send(409);
+                if (obj.event === 'signup') {
+                    socket.send({code:CONST.CONFLICT,message:INFO.ERROR_USER_CONFLICT});
+                } else if (obj.event === 'signin') {
+                    if (result.password === obj.password) {
+                        socket.send({code:CONST.SUCCESS,message:INFO.ERROR_NONE});
+                    } else {
+                        socket.send({code:CONST.FAILED,message:INFO.ERROR_PASSWORD});// 密码错误
+                    }
+
+                }
             }
-        } else if(obj.event === 'signin'){
-            if(!mySql[obj.user]) {
-                socket.send(404);
-            } else {
-                socket.send(200);
-            }
-        }
+        });
     });
 });
 
