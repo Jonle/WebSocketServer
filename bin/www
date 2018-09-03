@@ -1,54 +1,38 @@
 #!/usr/bin/env node
 const PORT = 8081;
-const CONST = require('../src/const');
-const INFO = require('../src/info');
 
 const ws = require('ws');
 const http = require('http');
 const app = require('../src/app');
 const server = http.createServer(app);
 const wss = new ws.Server({server});
-const SQL = require('..src/sql');
-let mysql = new SQL({
+const SQL = require('../src/sql');
+let mysql = new SQL('mysql', {
     password: 'jonle234517',
     database: 'websocket'
 });
+
+let router = require('../src/router');
+let user = require('../src/user');
 wss.on('connection', (socket) => {
     socket.on('message', (data) => {
-        var obj = JSON.parse(data);
-        mysql.connect();
-        let selectSql = `SELECT * FROM user WHERE name ${obj.user}`;
-        let insertSql = `INSERT INTO user(name,password) VALUES(${obj.user},${obj.password})`;
-        mysql.retrieve(selectSql, (error, result) => {
-            if (error) {
-                if (obj.event === 'signup') {
-                    mysql.create(insertSql, (error, result) => {
-                        if (!error) {
-                            socket.send({code:CONST.SUCCESS,message:INFO.ERROR_NONE});
-                        } else {
-                            socket.send({code:CONST.FAILED,message:INFO.ERROR_SIGN_UP});
-                        }
-                    });
-                } else if (obj.event === 'signin') {
-                    socket.send({code:CONST.FAILED,message:INFO.ERROR_USER_NAME});// 用户名错误
-                }
-            } else {
-                if (obj.event === 'signup') {
-                    socket.send({code:CONST.CONFLICT,message:INFO.ERROR_USER_CONFLICT});
-                } else if (obj.event === 'signin') {
-                    if (result.password === obj.password) {
-                        socket.send({code:CONST.SUCCESS,message:INFO.ERROR_NONE});
-                    } else {
-                        socket.send({code:CONST.FAILED,message:INFO.ERROR_PASSWORD});// 密码错误
-                    }
-
-                }
-            }
-        });
+        let userData = JSON.parse(data);
+        socket.userData = userData;
+        if (userData.eventType.match(/sign/gi)) {
+            router.connectSql(mysql, socket).then((userId) => {
+                socket.userId = userId;
+                user.addUser(socket);
+            });
+        } else if (userData.eventType === 'login') {
+            router.broadcast(wss, 'login', socket);
+        } else if (userData.eventType === 'message') {
+            router.broadcast(wss, 'message', socket);
+        }
+    });
+    socket.on('close', () => {
+        router.broadcast(wss, 'logout', socket);
+        user.deleteUser(socket);
     });
 });
 
 server.listen(PORT);
-
-
-
