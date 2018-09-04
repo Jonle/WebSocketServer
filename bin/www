@@ -2,9 +2,17 @@
 const PORT = 8081;
 
 const ws = require('ws');
-const http = require('http');
+const https = require('https');
 const app = require('../src/app');
-const server = http.createServer(app);
+const fs = require('fs');
+const path = require('path');
+
+//根据项目的路径导入生成的证书文件
+let privateKey  = fs.readFileSync(path.join(__dirname, './certificate/private.pem'), 'utf8');
+let certificate = fs.readFileSync(path.join(__dirname, './certificate/ca.cer'), 'utf8');
+let credentials = {key: privateKey, cert: certificate};
+
+const server = https.createServer(credentials,app);
 const wss = new ws.Server({server});
 const SQL = require('../src/sql');
 let mysql = new SQL('mysql', {
