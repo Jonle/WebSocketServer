@@ -29,7 +29,8 @@ wss.on('connection', (socket) => {
             router.broadcast(wss, 'message', socket);
         }
     });
-    socket.on('close', () => {
+    socket.on('close', (event) => {
+        console.log(event);
         router.broadcast(wss, 'logout', socket);
         user.deleteUser(socket);
     });
