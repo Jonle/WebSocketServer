@@ -8,8 +8,8 @@ const fs = require('fs');
 const path = require('path');
 
 //根据项目的路径导入生成的证书文件
-let privateKey  = fs.readFileSync(path.join(__dirname, './certificate/private.pem'), 'utf8');
-let certificate = fs.readFileSync(path.join(__dirname, './certificate/ca.cer'), 'utf8');
+let privateKey  = fs.readFileSync(path.join(__dirname, './certificate/ssl.key'), 'utf8');
+let certificate = fs.readFileSync(path.join(__dirname, './certificate/ssl.crt'), 'utf8');
 let credentials = {key: privateKey, cert: certificate};
 
 const server = https.createServer(credentials,app);
